@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec 12 20:46:05 2020
+
+@author: earllee1
+"""
+
+
+from selenium import webdriver
+import pandas as pd
+import time
+
+#pd.set_option('display.max_colwidth', -1)
+
+# 헤드리스 모드 (웹브라우져 안 켜지게 하는 것) 옵션(작동 안함?)
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('headless')
+chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('lang=ko_KR')
+
+browser = webdriver.Chrome('./chromedriver')
+
+# 화면 가장 아래까지 스크롤을 내리는 함수
+def scroll_down(browser):
+    browser.execute_script("window.scrollTo(0,document.body.scrollHeight);")
+    time.sleep(1)
+
+# 크롤링 함숨
+def crawl(url):
+    browser.get(url)
+    browser.implicitly_wait(100)  # seconds
+    
+    for i in range(0,20) :
+        print(i)
+        scroll_down(browser)
+        browser.implicitly_wait(100)  # seconds
+    
+    name = [element.text for element in browser.find_elements_by_css_selector("div.job-card-company-name")]
+    title = [element.text for element in browser.find_elements_by_css_selector("div.job-card-position")]
+    wt = pd.DataFrame({"name" : name, "title" : title})
+    return(wt)
+
+# 머신러닝 엔지니어
+url_01 = "https://www.wanted.co.kr/wdlist/518/1634?country=kr&job_sort=job.latest_order&years=-1&locations=seoul.all&locations=gyeonggi.seongnam-si"
+
+# 데이터 사이언티스트
+url_02 = "https://www.wanted.co.kr/wdlist/518/1024?country=kr&job_sort=job.latest_order&years=-1&locations=seoul.all&locations=gyeonggi.seongnam-si"
+
+# 빅데이터 엔지니어
+url_03 = "https://www.wanted.co.kr/wdlist/518/1025?country=kr&job_sort=job.latest_order&years=-1&locations=seoul.all&locations=gyeonggi.seongnam-si"
+
+# 데이터 엔지니어
+url_04 = "https://www.wanted.co.kr/wdlist/518/655?country=kr&job_sort=job.latest_order&years=-1&locations=seoul.all&locations=gyeonggi.seongnam-si"
+
+result_01 = crawl(url_01)
+result_02 = crawl(url_02)
+result_03 = crawl(url_03)
+result_04 = crawl(url_04)
+
+result = result_01.append(result_02).append(result_03).append(result_04).drop_duplicates()
+result
+
+browser.quit()
+
+wt_bfr = pd.read_csv("./rawdata/wanted.csv")
+wt_bfr.to_csv("./rawdata/wanted_bckup.csv", index = False)
+wt_new = pd.merge(result, wt_bfr, left_on=['name', 'title'], right_on=['corp_nm', 'job_title'], how='left')
+
+wt_tmp = wt_new[wt_new['job_title'].isnull()]
+wt_tmp = wt_tmp[['name', 'title']]
+wt_tmp.columns = ['corp_nm', 'job_title']
+
+dd = 20
+wt_tmp.iloc[dd:dd+10,:]
+
+
+result = wt_bfr.append(wt_tmp).drop_duplicates()
+
+result.columns = ['corp_nm', 'job_title']
+result.to_csv("./rawdata/wanted.csv", index = False)
+
+
+

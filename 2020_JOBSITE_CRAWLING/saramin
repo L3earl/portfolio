@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Dec 11 21:43:35 2020
+
+@author: earllee1
+"""
+
+import urllib
+
+from bs4 import BeautifulSoup as bs
+
+import pandas as pd
+
+# -- 데이터프레임 출력 전체폭을 1000자로 확장
+#pd.set_option('display.width', 1000)
+
+# -- 데이터프레임 출력 전체행을 1000개로 확장
+#pd.set_option('display.height', 1000)
+
+# -- 데이터프레임 컬럼 길이 출력 제약을 제거
+pd.set_option('display.max_colwidth', -1)
+
+base_url = "http://www.saramin.co.kr/zf_user/search/recruit?searchType=search&loc_mcd=101000&loc_cd=102190%2C102200%2C102210%2C102180&cat_key=41702%2C41710%2C41706%2C41703%2C41707%2C41711&job_type=1&company_cd=0%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C9%2C10&searchword={}&panel_type=&search_optional_item=y&search_done=y&panel_count=y&recruitPage={}&recruitSort=relation&recruitPageCount=40&inner_com_type=&quick_apply=&except_read="
+
+def crawl(keyword, page_num):
+    keyword = urllib.parse.quote(keyword)
+    url = base_url.format(keyword,page_num)
+    response = urllib.request.urlopen(url)
+    soup = bs(response,'html.parser')
+    name = [element.text for element in soup.select("strong.corp_name > a")]
+    detail = [element.text for element in soup.select("h2.job_tit > a > span")]
+    sr = pd.DataFrame({'기업 이름' : name, '자세 내용' : detail})
+    return sr
+
+# 사람인은 data == 데이터 로 검색 되는 듯 함 
+
+word_01 = "데이터"
+page_01 = 19  #페이지당 40
+word_02 = "추천"
+page_02 = 2
+word_03 = "해커"
+page_03 = 1
+word_04 = "growth"
+page_04 = 1
+word_05 = "해킹"
+page_05 = 1
+
+sr_list_01 = [crawl(word_01,page) for page in range(1,page_01)] 
+sr_list_02 = [crawl(word_02,page) for page in range(1,page_02)] 
+sr_list_03 = [crawl(word_03,page) for page in range(1,page_03)] 
+sr_list_04 = [crawl(word_04,page) for page in range(1,page_04)] 
+sr_list_05 = [crawl(word_04,page) for page in range(1,page_05)] 
+
+
+sr = pd.DataFrame()
+for i in range(page_01):
+    print(i)
+    sr = sr.append(sr_list_01[i], ignore_index = True)
+
+for i in range(page_02):
+    print(i)
+    sr = sr.append(sr_list_02[i], ignore_index = True)
+
+for i in range(page_03):
+    print(i)
+    sr = sr.append(sr_list_03[i], ignore_index = True)
+
+for i in range(page_04):
+    print(i)
+    sr = sr.append(sr_list_04[i], ignore_index = True)
+
+for i in range(page_05):
+    print(i)
+    sr = sr.append(sr_list_05[i], ignore_index = True)
+
+sr = sr.drop_duplicates()
+
+sr_bfr = pd.read_csv("./rawdata/saramin.csv")
+sr_bfr.to_csv("./rawdata/saramin_bckup.csv", index = False)
+sr_new = pd.merge(sr, sr_bfr, left_on=['기업 이름', '자세 내용'], right_on=['corp_nm', 'detail'], how='left')
+
+sr_tmp = sr_new.loc[sr_new['detail'].isnull()]
+sr_tmp = sr_new[['기업 이름', '자세 내용']]
+sr_tmp.columns = ['corp_nm', 'detail']
+
+sr = sr_bfr.append(sr_tmp).drop_duplicates()
+
+sr.columns = ['corp_nm', 'detail']
+sr.to_csv("./rawdata/saramin.csv", index = False)
+
+

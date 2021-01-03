@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec  9 21:32:59 2020
+
+@author: earllee1
+"""
+
+import urllib
+
+from bs4 import BeautifulSoup as bs
+
+import pandas as pd
+
+# -- 데이터프레임 출력 전체폭을 1000자로 확장
+#pd.set_option('display.width', 1000)
+
+# -- 데이터프레임 출력 전체행을 1000개로 확장
+#pd.set_option('display.height', 1000)
+
+# -- 데이터프레임 컬럼 길이 출력 제약을 제거
+pd.set_option('display.max_colwidth', -1)
+
+
+base_url = 'http://www.jobkorea.co.kr/Search/?stext={}&local=I000%2CB150&dkwrd=10001092949%2C10001092938%2C10001092945%2C10001092940%2C10001092942%2C10001092937%2C10001092776&edu=5%2C4%2C0&jobtype=1&tabType=recruit&Page_No={}'
+
+def crawl(keyword, page_num):
+    keyword = urllib.parse.quote(keyword)
+    url = base_url.format(keyword,page_num)
+    response = urllib.request.urlopen(url)
+    soup = bs(response,'html.parser')
+    name = [element.text for element in soup.select("a.name")][:19]
+    detail = [element.text for element in soup.select("div.post-list-info > a.title")][:19]
+    detail = [element.replace("\n","").replace("\r","") for element in detail]
+    jk = pd.DataFrame({'기업 이름' : name, '자세 내용' : detail})
+    return jk
+
+# 옵션이라 숫자가 안 맞음
+#exp = [element.text for element in soup.select("div.post-list-info > p.option > span.exp")][:19]
+#edu = [element.text for element in soup.select("div.post-list-info > p.option > span.edu")][:19]
+#worktype = [element.text for element in soup.select("div.post-list-info > p.option > span > div")][:119]
+#loc_short = [element.text for element in soup.select("div.post-list-info > p.option > span.loc.short")][:19]
+#loc_long = [element.text for element in soup.select("div.post-list-info > p.option > span.loc.long")][:19]
+#date = [element.text for element in soup.select("div.post-list-info > p.option > span.date")][:19]
+
+word_01 = "데이터"
+page_01 = 31  #페이지당 20
+word_02 = "data"
+page_02 = 13
+word_03 = "추천"
+page_03 = 6
+word_04 = "해커"
+page_04 = 2
+word_05 = "growth"
+page_05 = 2
+
+jk_list_01 = [crawl(word_01,page) for page in range(1,page_01)] 
+jk_list_02 = [crawl(word_02,page) for page in range(1,page_02)] 
+jk_list_03 = [crawl(word_03,page) for page in range(1,page_03)] 
+jk_list_04 = [crawl(word_04,page) for page in range(1,page_04)] 
+jk_list_05 = [crawl(word_04,page) for page in range(1,page_05)] 
+
+
+jk = pd.DataFrame()
+for i in range(page_01-1):
+    print(i)    
+    jk = jk.append(jk_list_01[i], ignore_index = True)
+
+for i in range(page_02-1):
+    print(i)
+    jk = jk.append(jk_list_02[i], ignore_index = True)
+
+for i in range(page_03-1):
+    print(i)
+    jk = jk.append(jk_list_03[i], ignore_index = True)
+
+for i in range(page_04-1):
+    print(i)
+    jk = jk.append(jk_list_04[i], ignore_index = True)
+
+for i in range(page_05-1):
+    print(i)
+    jk = jk.append(jk_list_05[i], ignore_index = True)
+
+
+jk = jk.drop_duplicates()
+
+jk_bfr = pd.read_csv("./rawdata/jobkorea.csv")
+jk_bfr.to_csv("./rawdata/jobkorea_bckup.csv", index = False)
+jk_new = pd.merge(jk, jk_bfr, left_on=['기업 이름', '자세 내용'], right_on=['corp_nm', 'detail'], how='left')
+
+jk_tmp = jk_new[jk_new['detail'].isnull()]
+jk_tmp = jk_tmp[['기업 이름', '자세 내용']]
+jk_tmp.columns = ['corp_nm', 'detail']
+
+dd =160
+jk_tmp.iloc[dd:dd+10,:]
+
+jk = jk_bfr.append(jk_tmp).drop_duplicates()
+
+jk.columns = ['corp_nm', 'detail']
+jk.to_csv("./rawdata/jobkorea.csv", index = False)
+
+
+
+

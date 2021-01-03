@@ -1,0 +1,98 @@
+#!/ujp/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec 12 14:41:07 2020
+
+@author: earllee1
+"""
+
+from selenium import webdriver
+import pandas as pd
+import urllib
+import math
+
+#pd.set_option('display.max_colwidth', -1)
+
+# 헤드리스 모드 (웹브라우져 안 켜지게 하는 것) 옵션(작동 안함?)
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('headless')
+chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('lang=ko_KR')
+
+browser = webdriver.Chrome('./chromedriver')
+browser.get('https://www.jobplanet.co.kr/')
+#browser.maximize_window()
+browser.implicitly_wait(100)  # seconds
+
+# Click the link to go to the login form
+login_link = browser.find_element_by_css_selector('a.btn_txt.login')
+login_link.click()
+
+# id
+username_input = browser.find_element_by_css_selector('input#user_email')
+username_input.send_keys("sainknight@naver.com")
+
+# password
+password_input = browser.find_element_by_css_selector('input#user_password')
+password_input.send_keys("@Jobplan1005") 
+
+browser.find_element_by_css_selector('button.btn_sign_up').click()
+
+# url
+base_url = "https://www.jobplanet.co.kr/job/search?q={}&page={}&ct_ids%5B%5D=1&ct_ids%5B%5D=2&jt_ids%5B%5D=3&occu_ids%5B%5D=11613"
+
+def crawl(keyword):
+    keyword = urllib.parse.quote(keyword)
+    
+    url = base_url.format(keyword,1)
+    browser.get(url) 
+    browser.implicitly_wait(100)
+    data_num = browser.find_element_by_css_selector("div.job_search_list_top > span").text
+    page_num = math.ceil((int(data_num.split()[1].replace("건",""))-13)/10)+1 # 첫페이지에 뜨는 공고 수가 13개 (나머지 10개)라 한번 빼준것 더해줌
+    
+    jp = pd.DataFrame()
+    
+    for page_num in range(1, page_num + 1):
+        print(page_num)
+        url = base_url.format(keyword,page_num)
+        browser.get(url) 
+        browser.implicitly_wait(100)
+        name = [element.text for element in browser.find_elements_by_css_selector("p.jobs_company")]
+        title = [element.text for element in browser.find_elements_by_css_selector("p.jobs_title")]
+        dt = pd.DataFrame({"name" : name, "title" : title})
+        jp = jp.append(dt)
+        print(len(jp))
+    return jp
+
+result_01 = crawl("data")
+result_02 = crawl("추천")
+
+base_url = "https://www.jobplanet.co.kr/job/search?q={}&page={}&jt_ids%5B%5D=3&ct_ids%5B%5D=1&ct_ids%5B%5D=2"
+result_03 = crawl("growth")
+
+result = result_01.append(result_02).append(result_03).drop_duplicates()
+result
+
+browser.quit()
+
+jp_bfr = pd.read_csv("./rawdata/jobplanet.csv")
+jp_bfr.to_csv("./rawdata/jobplanet_bckup.csv", index = False)
+jp_new = pd.merge(result, jp_bfr, left_on=['name', 'title'], right_on=['corp_nm', 'job_title'], how='left')
+
+jp_tmp = jp_new[jp_new['job_title'].isnull()]
+jp_tmp = jp_tmp[['name', 'title']]
+jp_tmp.columns = ['corp_nm', 'job_title']
+
+dd =10
+jp_tmp.iloc[dd:dd+10,:]
+
+result = jp_bfr.append(jp_tmp).drop_duplicates()
+
+result.columns = ['corp_nm', 'job_title']
+result.to_csv("./rawdata/jobplanet.csv", index = False)
+
+# 인터뷰 크롤링 방법
+# https://github.com/zzsza/jobplanet-interview-crawling/blob/master/jobplanet%20interview%20crawling.ipynb
+
+
+

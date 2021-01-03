@@ -1,0 +1,9 @@
+id,step,train_st_dt,train_end_dt,ap_sup,ap_con,ap_max,ap_min,cr_timeunit,tf_phase,kwd_map,naver_dlab,tf_idf,som_cluster,som,priority
+train_01,predict,2018-04-01,2018-07-01,0.0005,0.5,2,1,date,14,0,0,0,7,0,1
+train_02,predict,2018-04-01,2018-07-08,0.0005,0.5,2,1,date,14,0,0,0,7,0,2
+train_03,predict,2018-04-01,2018-07-15,0.0005,0.5,2,1,date,14,0,0,0,7,0,3
+train_04,predict,2018-04-01,2018-07-22,0.0005,0.5,2,1,date,14,0,0,0,7,0,4
+predict_01,predict,2018-04-01,2018-07-29,0.0005,0.5,2,1,date,14,0,0,0,7,0,5
+predict_02,predict,2018-04-01,2018-08-05,0.0005,0.5,2,1,date,14,0,0,0,7,0,6
+predict_03,predict,2018-04-01,2018-08-12,0.0005,0.5,2,1,date,14,0,0,0,7,0,7
+predict_04,predict,2018-04-01,2018-08-19,0.0005,0.5,2,1,date,14,0,0,0,7,0,8
